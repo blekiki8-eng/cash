@@ -11,51 +11,53 @@
         body { 
             font-family: 'Segoe UI', sans-serif; 
             background: var(--bg); color: white; 
-            margin: 0; overflow-y: auto; 
-            padding-bottom: 110px; /* Відступ для нижнього меню */
+            margin: 0; overflow: hidden;
+            height: 100vh;
         }
         
+        .tab-content { display: none; flex-direction: column; align-items: center; padding-top: 20px; width: 100%; height: 80vh; }
+        .active { display: flex; }
+
         #lake { 
-            width: 180px; height: 180px; 
+            width: 200px; height: 200px; 
             background: radial-gradient(circle at 30% 30%, #00f2fe, #004e92);
-            border-radius: 50%; margin: 20px auto;
-            position: relative; box-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
+            border-radius: 50%; margin: 30px auto;
+            position: relative; box-shadow: 0 0 40px rgba(0, 210, 255, 0.4);
             display: flex; align-items: center; justify-content: center;
         }
 
         #my-poplavok {
-            width: 50px; height: 50px;
+            width: 55px; height: 55px;
             position: absolute; display: none; z-index: 100;
         }
 
-        /* Анімація по колу */
         .orbit { animation: rotateOrbit 4s linear infinite; }
         @keyframes rotateOrbit {
-            from { transform: rotate(0deg) translateX(90px) rotate(0deg); }
-            to { transform: rotate(360deg) translateX(90px) rotate(-360deg); }
+            from { transform: rotate(0deg) translateX(100px) rotate(0deg); }
+            to { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
         }
 
-        /* Анімація клювання */
         .bite { animation: shakeBite 0.2s infinite; }
         @keyframes shakeBite {
-            0%, 100% { transform: rotate(0deg) translateX(90px) translateY(0px); }
-            50% { transform: rotate(0deg) translateX(90px) translateY(12px); }
+            0%, 100% { transform: rotate(0deg) translateX(100px) translateY(0px); }
+            50% { transform: rotate(0deg) translateX(100px) translateY(12px); }
         }
 
-        .stat-card { background: var(--card); border-radius: 20px; padding: 15px; width: 85%; margin: 10px auto; }
-        .row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
+        .stat-card { background: var(--card); border-radius: 20px; padding: 20px; width: 85%; margin: 10px auto; }
+        .row { display: flex; justify-content: space-between; margin: 12px 0; font-size: 16px; }
         
         .game-btn { 
             background: linear-gradient(135deg, #00d2ff, #3a7bd5); 
-            color: white; border: none; padding: 18px; border-radius: 50px; 
+            color: white; border: none; padding: 20px; border-radius: 50px; 
             width: 85%; font-size: 18px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);
         }
+
+        #status { font-size: 18px; text-align: center; height: 60px; margin-top: 10px; }
         
-        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #0f172a; padding-bottom: 30px; border-top: 1px solid #1e293b; z-index: 1000; }
-        .nav-item { flex: 1; text-align: center; padding: 15px; color: #64748b; font-size: 13px; }
+        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #0f172a; padding-bottom: 35px; border-top: 1px solid #1e293b; }
+        .nav-item { flex: 1; text-align: center; padding: 18px; color: #64748b; font-size: 14px; }
         .active-nav { color: var(--primary); font-weight: bold; }
-        .tab-content { display: none; flex-direction: column; align-items: center; padding-top: 20px; width: 100%; }
-        .active { display: flex; }
     </style>
 </head>
 <body>
@@ -64,7 +66,7 @@
         <h2>ПРОФІЛЬ</h2>
         <div class="stat-card">
             <div class="row"><span>👤 Гравець:</span><span id="u-name">...</span></div>
-            <div class="row"><span>🆔 Мій ID:</span><span id="u-id">...</span></div>
+            <div class="row"><span>🆔 ID:</span><span id="u-id">...</span></div>
             <div class="row"><span>💰 Баланс:</span><span id="balance" style="color: #fbbf24;">0</span></div>
         </div>
     </div>
@@ -73,9 +75,9 @@
         <h2 style="letter-spacing: 5px;">ОЗЕРО</h2>
         <div id="lake">
             <img src="poplavok.png" id="my-poplavok">
-            <div id="water-icon" style="font-size: 50px;">🌊</div>
+            <div id="water-icon" style="font-size: 60px;">🌊</div>
         </div>
-        <p id="status" style="margin-bottom: 20px;">Готовий до риболовлі?</p>
+        <div id="status">Готовий?</div>
         <button id="action-btn" class="game-btn" onclick="handleAction()">ЗАКИНУТИ</button>
     </div>
 
@@ -88,6 +90,22 @@
         const tg = window.Telegram.WebApp;
         const UID = String(tg.initDataUnsafe?.user?.id || "000000");
         let coins = 0, isFishing = false, canPull = false;
+
+        // ЛОГІКА ШАНСІВ
+        function getRandomLoot() {
+            const chance = Math.random() * 100;
+
+            if (chance < 50) { // 50% шанс на СМІТТЯ
+                const trashChance = Math.random() * 100;
+                if (trashChance < 50) return { name: "🍼 Бутилка", price: -10 };
+                else return { name: "🛍️ Пакет", price: -5 };
+            } else { // 50% шанс на РИБУ
+                const fishChance = Math.random() * 100;
+                if (fishChance <= 1) return { name: "🔥 ДОБРИЙ КАРАСЬ", price: 67, special: true };
+                else if (fishChance <= 25) return { name: "🐠 Маленький карасик", price: 15 };
+                else return { name: "🐟 Маленька риба", price: 5 };
+            }
+        }
 
         async function load() {
             const r = await fetch(`/api/get_balance?user_id=${UID}`);
@@ -116,20 +134,32 @@
             if (!isFishing) {
                 isFishing = true; canPull = false;
                 btn.innerText = "ЧЕКАЙ..."; btn.disabled = true;
+                st.innerText = "Вудка закинута...";
                 wat.style.display = "none"; pop.style.display = "block";
                 pop.className = "orbit";
+
                 setTimeout(() => {
                     canPull = true; btn.disabled = false;
-                    btn.innerText = "ТЯГНИ!"; pop.className = "bite";
+                    btn.innerText = "ТЯГНИ!"; st.innerText = "КЛЮЄ!!!";
+                    pop.className = "bite";
                     tg.HapticFeedback.notificationOccurred('warning');
-                }, 3000);
+                }, Math.random() * 3000 + 2000);
+
             } else if (canPull) {
                 isFishing = false; canPull = false;
                 pop.style.display = "none"; wat.style.display = "block";
-                coins += Math.floor(Math.random() * 10) + 5;
+                
+                const loot = getRandomLoot();
+                coins += loot.price;
+                if (coins < 0) coins = 0;
+
                 document.getElementById('balance').innerText = coins;
+                st.innerHTML = `${loot.name}<br><span style="color: ${loot.price > 0 ? '#4ade80' : '#f87171'}">
+                    ${loot.price > 0 ? '+' : ''}${loot.price} монет</span>`;
+                
                 btn.innerText = "ЗАКИНУТИ";
                 save();
+                if (loot.special) tg.HapticFeedback.notificationOccurred('success');
             }
         }
 
@@ -139,6 +169,7 @@
             document.getElementById(id).classList.add('active');
             el.classList.add('active-nav');
         }
+
         tg.expand();
         load();
     </script>
