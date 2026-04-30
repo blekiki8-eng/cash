@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fishing Game</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; }
+        
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg); color: white; 
+            margin: 0; overflow-y: auto; 
+            padding-bottom: 110px; /* Відступ для нижнього меню */
+        }
+        
+        #lake { 
+            width: 180px; height: 180px; 
+            background: radial-gradient(circle at 30% 30%, #00f2fe, #004e92);
+            border-radius: 50%; margin: 20px auto;
+            position: relative; box-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        #my-poplavok {
+            width: 50px; height: 50px;
+            position: absolute; display: none; z-index: 100;
+        }
+
+        /* Анімація по колу */
+        .orbit { animation: rotateOrbit 4s linear infinite; }
+        @keyframes rotateOrbit {
+            from { transform: rotate(0deg) translateX(90px) rotate(0deg); }
+            to { transform: rotate(360deg) translateX(90px) rotate(-360deg); }
+        }
+
+        /* Анімація клювання */
+        .bite { animation: shakeBite 0.2s infinite; }
+        @keyframes shakeBite {
+            0%, 100% { transform: rotate(0deg) translateX(90px) translateY(0px); }
+            50% { transform: rotate(0deg) translateX(90px) translateY(12px); }
+        }
+
+        .stat-card { background: var(--card); border-radius: 20px; padding: 15px; width: 85%; margin: 10px auto; }
+        .row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
+        
+        .game-btn { 
+            background: linear-gradient(135deg, #00d2ff, #3a7bd5); 
+            color: white; border: none; padding: 18px; border-radius: 50px; 
+            width: 85%; font-size: 18px; font-weight: bold; cursor: pointer;
+        }
+        
+        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #0f172a; padding-bottom: 30px; border-top: 1px solid #1e293b; z-index: 1000; }
+        .nav-item { flex: 1; text-align: center; padding: 15px; color: #64748b; font-size: 13px; }
+        .active-nav { color: var(--primary); font-weight: bold; }
+        .tab-content { display: none; flex-direction: column; align-items: center; padding-top: 20px; width: 100%; }
+        .active { display: flex; }
+    </style>
+</head>
+<body>
+
+    <div id="profile" class="tab-content">
+        <h2>ПРОФІЛЬ</h2>
+        <div class="stat-card">
+            <div class="row"><span>👤 Гравець:</span><span id="u-name">...</span></div>
+            <div class="row"><span>🆔 Мій ID:</span><span id="u-id">...</span></div>
+            <div class="row"><span>💰 Баланс:</span><span id="balance" style="color: #fbbf24;">0</span></div>
+        </div>
+    </div>
+
+    <div id="fishing" class="tab-content active">
+        <h2 style="letter-spacing: 5px;">ОЗЕРО</h2>
+        <div id="lake">
+            <img src="poplavok.png" id="my-poplavok">
+            <div id="water-icon" style="font-size: 50px;">🌊</div>
+        </div>
+        <p id="status" style="margin-bottom: 20px;">Готовий до риболовлі?</p>
+        <button id="action-btn" class="game-btn" onclick="handleAction()">ЗАКИНУТИ</button>
+    </div>
+
+    <div class="nav">
+        <div class="nav-item" onclick="tab('profile', this)">ПРОФІЛЬ</div>
+        <div class="nav-item active-nav" onclick="tab('fishing', this)">ОЗЕРО</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        const UID = String(tg.initDataUnsafe?.user?.id || "000000");
+        let coins = 0, isFishing = false, canPull = false;
+
+        async function load() {
+            const r = await fetch(`/api/get_balance?user_id=${UID}`);
+            const d = await r.json();
+            if (!d.error) {
+                coins = d.coins;
+                document.getElementById('u-name').innerText = d.name || "Рибалка";
+                document.getElementById('u-id').innerText = UID;
+                document.getElementById('balance').innerText = coins;
+            }
+        }
+
+        async function save() {
+            await fetch('/api/save_balance', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ user_id: UID, coins: coins })
+            });
+        }
+
+        function handleAction() {
+            const btn = document.getElementById('action-btn');
+            const st = document.getElementById('status');
+            const pop = document.getElementById('my-poplavok');
+            const wat = document.getElementById('water-icon');
+
+            if (!isFishing) {
+                isFishing = true; canPull = false;
+                btn.innerText = "ЧЕКАЙ..."; btn.disabled = true;
+                wat.style.display = "none"; pop.style.display = "block";
+                pop.className = "orbit";
+                setTimeout(() => {
+                    canPull = true; btn.disabled = false;
+                    btn.innerText = "ТЯГНИ!"; pop.className = "bite";
+                    tg.HapticFeedback.notificationOccurred('warning');
+                }, 3000);
+            } else if (canPull) {
+                isFishing = false; canPull = false;
+                pop.style.display = "none"; wat.style.display = "block";
+                coins += Math.floor(Math.random() * 10) + 5;
+                document.getElementById('balance').innerText = coins;
+                btn.innerText = "ЗАКИНУТИ";
+                save();
+            }
+        }
+
+        function tab(id, el) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
+            document.getElementById(id).classList.add('active');
+            el.classList.add('active-nav');
+        }
+        tg.expand();
+        load();
+    </script>
+</body>
+</html>
