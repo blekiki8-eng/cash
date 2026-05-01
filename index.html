@@ -16,8 +16,8 @@
             z-index: 9999; display: flex; flex-direction: column;
             align-items: center; justify-content: center; text-align: center;
         }
-        .timer-digits { font-size: 48px; font-weight: bold; color: var(--primary); font-family: monospace; text-shadow: 0 0 20px rgba(0, 210, 255, 0.5); }
-        .launcher-title { font-size: 24px; margin-bottom: 10px; letter-spacing: 2px; }
+        .timer-digits { font-size: 42px; font-weight: bold; color: var(--primary); font-family: monospace; text-shadow: 0 0 20px rgba(0, 210, 255, 0.5); }
+        .launcher-title { font-size: 20px; margin-bottom: 10px; letter-spacing: 2px; color: #94a3b8; }
 
         /* Основний контент гри */
         .tab-content { display: none; flex-direction: column; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; }
@@ -47,12 +47,12 @@
     <!-- Екран запуску з таймером -->
     <div id="launcher">
         <div style="font-size: 60px; margin-bottom: 20px;">🎣</div>
-        <div class="launcher-title">ДО ЗАПУСКУ:</div>
-        <div id="timer" class="timer-digits">00:00:00</div>
-        <p style="color: #64748b; margin-top: 20px;">Офіційний старт о 12:00 за Києвом</p>
+        <div class="launcher-title">ВІДКРИТТЯ ЧЕРЕЗ:</div>
+        <div id="timer" class="timer-digits">00:00:00:00</div>
+        <p style="color: #64748b; margin-top: 20px; font-size: 14px;">Старт: 02.05.2026 о 12:00 (Київ)</p>
     </div>
 
-    <!-- Вміст гри (прихований під таймером) -->
+    <!-- Гра -->
     <div id="profile" class="tab-content">
         <h2>ПРОФІЛЬ</h2>
         <div class="stat-card">
@@ -89,31 +89,31 @@
         const UID = String(tg.initDataUnsafe?.user?.id || "000000");
         let coins = 0, isFishing = false, canPull = false;
 
-        // --- ЛОГІКА ТАЙМЕРА ---
+        // --- ТОЧНА ЛОГІКА ТАЙМЕРА НА 02.05.2026 12:00 ---
         function updateTimer() {
             const now = new Date();
-            const target = new Date();
-            
-            // Встановлюємо 12:00 сьогодні
-            target.setHours(12, 0, 0, 0);
+            // Встановлюємо цільову дату: Рік, Місяць (травень - це індекс 4), День, Година, Хв, Сек
+            const target = new Date(2026, 4, 2, 12, 0, 0);
 
-            // Якщо зараз вже більше 12:00, значить гра відкрита
             if (now >= target) {
                 document.getElementById('launcher').style.display = 'none';
                 return;
             }
 
             const diff = target - now;
-            const h = Math.floor(diff / (1000 * 60 * 60));
-            const m = Math.floor((diff / (1000 * 60)) % 60);
-            const s = Math.floor((diff / 1000) % 60);
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const mins = Math.floor((diff / (1000 * 60)) % 60);
+            const secs = Math.floor((diff / 1000) % 60);
 
+            // Формат: ДНІ:ГОД:ХВ:СЕК
             document.getElementById('timer').innerText = 
-                `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                `${days > 0 ? days + 'd ' : ''}${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
         setInterval(updateTimer, 1000);
-        updateTimer(); // Запустити відразу
+        updateTimer();
 
         // --- ЛОГІКА ГРИ ---
         async function load() {
