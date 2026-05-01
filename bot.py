@@ -6,7 +6,7 @@ from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# Дані з Variables у Railway
+# Налаштування (беруться з Railway)
 TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL")
 MONGO_URL = os.getenv("MONGO_URL")
@@ -15,7 +15,7 @@ PORT = int(os.getenv("PORT", 8080))
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Підключення до бази (використовуємо твою нову базу)
+# Підключення до бази даних
 client = AsyncIOMotorClient(MONGO_URL, tlsAllowInvalidCertificates=True)
 db = client["fish_cash_game_prod"]
 users_col = db["users"]
@@ -23,25 +23,44 @@ users_col = db["users"]
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     user_id = str(message.from_user.id)
-    full_name = message.from_user.full_name
+    # Отримуємо ім'я або юзернейм, якщо ім'я порожнє
+    full_name = message.from_user.full_name or message.from_user.username or "Рибалка"
     
-    # Створюємо гравця, якщо його немає
+    # Реферальна логіка (якщо зайшли за посиланням)
+    args = message.text.split()
+    referrer_id = args[1] if len(args) > 1 else None
+
     user = await users_col.find_one({"user_id": user_id})
     if not user:
-        await users_col.insert_one({"user_id": user_id, "coins": 100, "name": full_name})
+        # Новий гравець: даємо 100 монет
+        await users_col.insert_one({
+            "user_id": user_id, 
+            "coins": 100, 
+            "name": full_name
+        })
+        
+        # Бонус рефереру (+50 монет)
+        if referrer_id and referrer_id != user_id:
+            await users_col.update_one({"user_id": referrer_id}, {"$inc": {"coins": 50}})
+            try:
+                await bot.send_message(referrer_id, f"💎 Твій друг {full_name} приєднався! Тобі нараховано +50 монет!")
+            except: 
+                pass
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎣 Почати гру", web_app=WebAppInfo(url=WEBAPP_URL))]
+        [InlineKeyboardButton(text="🎣 Грати в Fish Cash", web_app=WebAppInfo(url=WEBAPP_URL))]
     ])
     
-    welcome_text = "Welcome 🤗\nНегайно заходи в гру і злови більше риб!"
+    welcome_text = f"Привіт, {full_name}! 🌊\nГотовий наловити на ламборгіні?"
+    
     try:
         photo = FSInputFile("welcome.jpg")
         await message.answer_photo(photo=photo, caption=welcome_text, reply_markup=kb)
     except:
         await message.answer(welcome_text, reply_markup=kb)
 
-# --- API СЕРВЕР ---
+# --- API для зв'язку гри з базою ---
+
 async def get_balance(request):
     user_id = request.query.get("user_id")
     user = await users_col.find_one({"user_id": str(user_id)})
@@ -62,7 +81,6 @@ async def save_balance(request):
     except:
         return web.json_response({"ok": False}, status=500)
 
-# Віддача файлів браузеру
 async def handle_index(request): return web.FileResponse('index.html')
 async def handle_poplavok(request): return web.FileResponse('poplavok.png')
 
@@ -73,9 +91,13 @@ app.router.add_get('/api/get_balance', get_balance)
 app.router.add_post('/api/save_balance', save_balance)
 
 async def main():
-    runner = web.AppRunner(app); await runner.setup()
+    runner = web.AppRunner(app)
+    await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        pass
