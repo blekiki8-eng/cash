@@ -3,60 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fishing Game</title>
+    <title>Fish Cash Game</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; }
-        
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: var(--bg); color: white; 
-            margin: 0; overflow: hidden;
-            height: 100vh;
-        }
-        
-        .tab-content { display: none; flex-direction: column; align-items: center; padding-top: 20px; width: 100%; height: 80vh; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 100px; overflow-x: hidden; }
+        .tab-content { display: none; flex-direction: column; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; }
         .active { display: flex; }
-
         #lake { 
-            width: 200px; height: 200px; 
+            width: 230px; height: 230px; 
             background: radial-gradient(circle at 30% 30%, #00f2fe, #004e92);
-            border-radius: 50%; margin: 30px auto;
-            position: relative; box-shadow: 0 0 40px rgba(0, 210, 255, 0.4);
-            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; margin: 20px auto; position: relative;
+            box-shadow: 0 0 40px rgba(0, 210, 255, 0.4); display: flex; align-items: center; justify-content: center;
         }
-
-        #my-poplavok {
-            width: 55px; height: 55px;
-            position: absolute; display: none; z-index: 100;
-        }
-
-        .orbit { animation: rotateOrbit 4s linear infinite; }
-        @keyframes rotateOrbit {
-            from { transform: rotate(0deg) translateX(100px) rotate(0deg); }
-            to { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
-        }
-
-        .bite { animation: shakeBite 0.2s infinite; }
-        @keyframes shakeBite {
-            0%, 100% { transform: rotate(0deg) translateX(100px) translateY(0px); }
-            50% { transform: rotate(0deg) translateX(100px) translateY(12px); }
-        }
-
-        .stat-card { background: var(--card); border-radius: 20px; padding: 20px; width: 85%; margin: 10px auto; }
-        .row { display: flex; justify-content: space-between; margin: 12px 0; font-size: 16px; }
-        
-        .game-btn { 
-            background: linear-gradient(135deg, #00d2ff, #3a7bd5); 
-            color: white; border: none; padding: 20px; border-radius: 50px; 
-            width: 85%; font-size: 18px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);
-        }
-
-        #status { font-size: 18px; text-align: center; height: 60px; margin-top: 10px; }
-        
-        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #0f172a; padding-bottom: 35px; border-top: 1px solid #1e293b; }
-        .nav-item { flex: 1; text-align: center; padding: 18px; color: #64748b; font-size: 14px; }
+        #my-poplavok { width: 70px; height: 70px; position: absolute; display: none; z-index: 100; pointer-events: none; }
+        .bite { animation: shake 0.2s infinite; }
+        @keyframes shake { 0% { transform: translateY(0); } 50% { transform: translateY(12px); } 100% { transform: translateY(0); } }
+        .stat-card { background: var(--card); border-radius: 20px; padding: 15px; width: 100%; margin-bottom: 15px; }
+        .row { display: flex; justify-content: space-between; margin: 10px 0; }
+        .game-btn { background: linear-gradient(135deg, #00d2ff, #3a7bd5); color: white; border: none; padding: 18px; border-radius: 50px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #1e293b; padding-bottom: 25px; border-top: 1px solid #334155; }
+        .nav-item { flex: 1; text-align: center; padding: 15px; color: #94a3b8; font-size: 12px; }
         .active-nav { color: var(--primary); font-weight: bold; }
     </style>
 </head>
@@ -65,25 +32,32 @@
     <div id="profile" class="tab-content">
         <h2>ПРОФІЛЬ</h2>
         <div class="stat-card">
-            <div class="row"><span>👤 Гравець:</span><span id="u-name">...</span></div>
-            <div class="row"><span>🆔 ID:</span><span id="u-id">...</span></div>
-            <div class="row"><span>💰 Баланс:</span><span id="balance" style="color: #fbbf24;">0</span></div>
+            <div class="row"><span>👤 Гравець:</span><span id="u-name">Завантаження...</span></div>
+            <div class="row"><span>🆔 Мій ID:</span><span id="u-id">...</span></div>
+            <div class="row"><span>💰 Баланс:</span><span id="balance" style="color: #fbbf24; font-weight: bold;">0</span></div>
         </div>
+        <button class="game-btn" style="font-size: 14px; padding: 12px;" onclick="copyRef()">🔗 Запросити друга (+50 💰)</button>
     </div>
 
     <div id="fishing" class="tab-content active">
-        <h2 style="letter-spacing: 5px;">ОЗЕРО</h2>
+        <h2>ОЗЕРО</h2>
         <div id="lake">
             <img src="poplavok.png" id="my-poplavok">
             <div id="water-icon" style="font-size: 60px;">🌊</div>
         </div>
-        <div id="status">Готовий?</div>
+        <div id="status" style="height: 50px; text-align: center; margin-top: 10px;">Готовий?</div>
         <button id="action-btn" class="game-btn" onclick="handleAction()">ЗАКИНУТИ</button>
+    </div>
+
+    <div id="market" class="tab-content">
+        <h2>МАРКЕТ</h2>
+        <div class="stat-card">Магазин у розробці...</div>
     </div>
 
     <div class="nav">
         <div class="nav-item" onclick="tab('profile', this)">ПРОФІЛЬ</div>
         <div class="nav-item active-nav" onclick="tab('fishing', this)">ОЗЕРО</div>
+        <div class="nav-item" onclick="tab('market', this)">МАРКЕТ</div>
     </div>
 
     <script>
@@ -91,30 +65,21 @@
         const UID = String(tg.initDataUnsafe?.user?.id || "000000");
         let coins = 0, isFishing = false, canPull = false;
 
-        // ЛОГІКА ШАНСІВ
-        function getRandomLoot() {
-            const chance = Math.random() * 100;
-
-            if (chance < 50) { // 50% шанс на СМІТТЯ
-                const trashChance = Math.random() * 100;
-                if (trashChance < 50) return { name: "🍼 Бутилка", price: -10 };
-                else return { name: "🛍️ Пакет", price: -5 };
-            } else { // 50% шанс на РИБУ
-                const fishChance = Math.random() * 100;
-                if (fishChance <= 1) return { name: "🔥 ДОБРИЙ КАРАСЬ", price: 67, special: true };
-                else if (fishChance <= 25) return { name: "🐠 Маленький карасик", price: 15 };
-                else return { name: "🐟 Маленька риба", price: 5 };
-            }
-        }
-
         async function load() {
-            const r = await fetch(`/api/get_balance?user_id=${UID}`);
-            const d = await r.json();
-            if (!d.error) {
-                coins = d.coins;
-                document.getElementById('u-name').innerText = d.name || "Рибалка";
+            try {
+                const r = await fetch(`/api/get_balance?user_id=${UID}`);
+                const d = await r.json();
+                const tgName = tg.initDataUnsafe?.user?.first_name || "Рибалка";
+                
+                document.getElementById('u-name').innerText = d.name || tgName;
                 document.getElementById('u-id').innerText = UID;
-                document.getElementById('balance').innerText = coins;
+                
+                if (!d.error) {
+                    coins = d.coins;
+                    document.getElementById('balance').innerText = coins;
+                }
+            } catch (e) {
+                document.getElementById('u-name').innerText = "Рибалка";
             }
         }
 
@@ -123,6 +88,15 @@
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ user_id: UID, coins: coins })
             });
+        }
+
+        function copyRef() {
+            const link = `https://t.me/fishcash_gamebot?start=${UID}`;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(link).then(() => tg.showAlert("Скопійовано!"));
+            } else {
+                tg.showAlert("Твоє посилання: " + link);
+            }
         }
 
         function handleAction() {
@@ -134,40 +108,41 @@
             if (!isFishing) {
                 isFishing = true; canPull = false;
                 btn.innerText = "ЧЕКАЙ..."; btn.disabled = true;
-                st.innerText = "Вудка закинута...";
-                wat.style.display = "none"; pop.style.display = "block";
-                pop.className = "orbit";
+                st.innerText = "Закидаємо...";
+                
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 70;
+                pop.style.left = `calc(50% - 35px + ${Math.cos(angle)*dist}px)`;
+                pop.style.top = `calc(50% - 35px + ${Math.sin(angle)*dist}px)`;
+                pop.style.display = "block"; wat.style.display = "none";
 
                 setTimeout(() => {
                     canPull = true; btn.disabled = false;
-                    btn.innerText = "ТЯГНИ!"; st.innerText = "КЛЮЄ!!!";
-                    pop.className = "bite";
+                    btn.innerText = "ТЯГНИ!"; pop.className = "bite";
                     tg.HapticFeedback.notificationOccurred('warning');
                 }, Math.random() * 3000 + 2000);
 
             } else if (canPull) {
                 isFishing = false; canPull = false;
-                pop.style.display = "none"; wat.style.display = "block";
+                pop.style.display = "none"; pop.className = ""; wat.style.display = "block";
                 
-                const loot = getRandomLoot();
-                coins += loot.price;
-                if (coins < 0) coins = 0;
-
+                const loot = Math.random() > 0.4 ? {n: "🐟 Риба", p: 10} : {n: "👞 Чобіт", p: -5};
+                coins += loot.p; if (coins < 0) coins = 0;
+                
                 document.getElementById('balance').innerText = coins;
-                st.innerHTML = `${loot.name}<br><span style="color: ${loot.price > 0 ? '#4ade80' : '#f87171'}">
-                    ${loot.price > 0 ? '+' : ''}${loot.price} монет</span>`;
-                
+                st.innerHTML = `${loot.n} (${loot.p > 0 ? '+' : ''}${loot.p})`;
                 btn.innerText = "ЗАКИНУТИ";
                 save();
-                if (loot.special) tg.HapticFeedback.notificationOccurred('success');
             }
         }
 
         function tab(id, el) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
             document.getElementById(id).classList.add('active');
-            el.classList.add('active-nav');
+            if(el) {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
+                el.classList.add('active-nav');
+            }
         }
 
         tg.expand();
