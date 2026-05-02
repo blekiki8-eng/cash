@@ -7,75 +7,83 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 100px; overflow-x: hidden; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 100px; overflow: hidden; }
         
-        /* Екран таймера */
-        #launcher {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
-            z-index: 9999; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center;
-        }
-        .timer-digits { font-size: 42px; font-weight: bold; color: var(--primary); font-family: monospace; text-shadow: 0 0 20px rgba(0, 210, 255, 0.5); }
-        .launcher-title { font-size: 20px; margin-bottom: 10px; letter-spacing: 2px; color: #94a3b8; }
-
-        /* Основний контент гри */
         .tab-content { display: none; flex-direction: column; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; }
         .active { display: flex; }
         
+        /* Профіль */
+        .stat-card { background: var(--card); border-radius: 20px; padding: 15px; width: 100%; margin-bottom: 15px; border: 1px solid #334155; }
+        .row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; }
+        .val { color: var(--primary); font-weight: bold; }
+        
+        /* Озеро */
         #lake { 
-            width: 230px; height: 230px; 
+            width: 250px; height: 250px; 
             background: radial-gradient(circle at 30% 30%, #00f2fe, #004e92);
-            border-radius: 50%; margin: 20px auto; position: relative;
-            box-shadow: 0 0 40px rgba(0, 210, 255, 0.4); display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; margin: 30px auto; position: relative;
+            box-shadow: 0 0 50px rgba(0, 210, 255, 0.3); display: flex; align-items: center; justify-content: center;
         }
-        #my-poplavok { width: 70px; height: 70px; position: absolute; display: none; z-index: 100; pointer-events: none; }
+        #my-poplavok { width: 70px; height: 70px; position: absolute; display: none; z-index: 10; }
         .bite { animation: shake 0.2s infinite; }
-        @keyframes shake { 0% { transform: translateY(0); } 50% { transform: translateY(12px); } 100% { transform: translateY(0); } }
-        
-        .stat-card { background: var(--card); border-radius: 20px; padding: 15px; width: 100%; margin-bottom: 15px; }
-        .row { display: flex; justify-content: space-between; margin: 10px 0; }
-        .game-btn { background: linear-gradient(135deg, #00d2ff, #3a7bd5); color: white; border: none; padding: 18px; border-radius: 50px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; }
-        
+        @keyframes shake { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
+
+        /* Елементи */
+        .game-btn { background: linear-gradient(135deg, #00d2ff, #3a7bd5); color: white; border: none; padding: 18px; border-radius: 50px; width: 100%; font-size: 16px; font-weight: bold; }
+        .promo-btn { background: #334155; border: none; color: white; padding: 10px 15px; border-radius: 10px; margin-left: 5px; }
+        input { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 12px; width: 60%; }
+
+        /* Навігація */
         .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #1e293b; padding-bottom: 25px; border-top: 1px solid #334155; }
-        .nav-item { flex: 1; text-align: center; padding: 15px; color: #94a3b8; font-size: 12px; }
+        .nav-item { flex: 1; text-align: center; padding: 15px; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
         .active-nav { color: var(--primary); font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- Екран запуску з таймером -->
-    <div id="launcher">
-        <div style="font-size: 60px; margin-bottom: 20px;">🎣</div>
-        <div class="launcher-title">ВІДКРИТТЯ ЧЕРЕЗ:</div>
-        <div id="timer" class="timer-digits">00:00:00:00</div>
-        <p style="color: #64748b; margin-top: 20px; font-size: 14px;">Старт: 02.05.2026 о 12:00 (Київ)</p>
-    </div>
-
-    <!-- Гра -->
+    <!-- ПРОФІЛЬ -->
     <div id="profile" class="tab-content">
         <h2>ПРОФІЛЬ</h2>
         <div class="stat-card">
-            <div class="row"><span>👤 Гравець:</span><span id="u-name">...</span></div>
-            <div class="row"><span>🆔 ID:</span><span id="u-id">...</span></div>
-            <div class="row"><span>💰 Баланс:</span><span id="balance" style="color: #fbbf24; font-weight: bold;">0</span></div>
+            <div class="row"><span>👤 ГРАВЕЦЬ:</span><span id="u-name" class="val">...</span></div>
+            <div class="row"><span>🆔 ВАШ ID:</span><span id="u-id" class="val">...</span></div>
+            <div class="row"><span>💰 БАЛАНС:</span><span id="balance" class="val">0</span></div>
         </div>
-        <button class="game-btn" onclick="copyRef()">🔗 Запросити друга</button>
+        
+        <div class="stat-card">
+            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;">ВАШЕ ПРИГЛАШЕННЯ:</p>
+            <input type="text" id="ref-link" readonly style="width: 100%; font-size: 10px; margin-bottom: 10px;">
+            <button class="game-btn" onclick="copyRef()" style="padding: 10px; font-size: 12px;">КОПІЮВАТИ</button>
+        </div>
+
+        <div class="stat-card">
+            <p style="margin-bottom: 10px;">🎁 ПРОМОКОД:</p>
+            <div style="display: flex;">
+                <input type="text" id="promo-input" placeholder="Введіть...">
+                <button class="promo-btn" onclick="applyPromo()">OK</button>
+            </div>
+            <div id="promo-msg" style="font-size: 11px; margin-top: 5px;"></div>
+        </div>
     </div>
 
+    <!-- ОЗЕРО -->
     <div id="fishing" class="tab-content active">
-        <h2>ОЗЕРО</h2>
+        <h2 style="letter-spacing: 3px;">ОЗЕРО</h2>
         <div id="lake">
             <img src="poplavok.png" id="my-poplavok">
-            <div id="water-icon" style="font-size: 60px;">🌊</div>
+            <div style="font-size: 80px; opacity: 0.3;">🐟</div>
         </div>
-        <div id="status" style="height: 50px; text-align: center; margin-top: 10px;">Готовий?</div>
+        <div id="status" style="margin-bottom: 25px; font-weight: bold; color: var(--primary);">ГОТОВИЙ?</div>
         <button id="action-btn" class="game-btn" onclick="handleAction()">ЗАКИНУТИ</button>
     </div>
 
+    <!-- МАРКЕТ -->
     <div id="market" class="tab-content">
         <h2>МАРКЕТ</h2>
-        <div class="stat-card">Магазин скоро відкриється!</div>
+        <div class="stat-card" style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 40px; margin-bottom: 15px;">🛒</div>
+            МАГАЗИН В РОЗРОБЦІ...<br>СКОРО ТУТ БУДУТЬ НОВІ ВУДКИ ТА ПРИМАНКИ!
+        </div>
     </div>
 
     <div class="nav">
@@ -89,92 +97,76 @@
         const UID = String(tg.initDataUnsafe?.user?.id || "000000");
         let coins = 0, isFishing = false, canPull = false;
 
-        // --- ТОЧНА ЛОГІКА ТАЙМЕРА НА 02.05.2026 12:00 ---
-        function updateTimer() {
-            const now = new Date();
-            // Встановлюємо цільову дату: Рік, Місяць (травень - це індекс 4), День, Година, Хв, Сек
-            const target = new Date(2026, 4, 2, 12, 0, 0);
-
-            if (now >= target) {
-                document.getElementById('launcher').style.display = 'none';
-                return;
-            }
-
-            const diff = target - now;
-            
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-            const mins = Math.floor((diff / (1000 * 60)) % 60);
-            const secs = Math.floor((diff / 1000) % 60);
-
-            // Формат: ДНІ:ГОД:ХВ:СЕК
-            document.getElementById('timer').innerText = 
-                `${days > 0 ? days + 'd ' : ''}${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        setInterval(updateTimer, 1000);
-        updateTimer();
-
-        // --- ЛОГІКА ГРИ ---
         async function load() {
-            try {
-                const r = await fetch(`/api/get_balance?user_id=${UID}`);
-                const d = await r.json();
-                const tgName = tg.initDataUnsafe?.user?.first_name || "Рибалка";
-                document.getElementById('u-name').innerText = d.name || tgName;
-                document.getElementById('u-id').innerText = UID;
-                if (!d.error) {
-                    coins = d.coins;
-                    document.getElementById('balance').innerText = coins;
-                }
-            } catch (e) {}
+            const r = await fetch(`/api/get_balance?user_id=${UID}`);
+            const d = await r.json();
+            document.getElementById('u-name').innerText = d.name || tg.initDataUnsafe?.user?.first_name || "Рибалка";
+            document.getElementById('u-id').innerText = UID;
+            document.getElementById('ref-link').value = `https://t.me/fishcash_gamebot?start=${UID}`;
+            if(!d.error) {
+                coins = d.coins;
+                document.getElementById('balance').innerText = coins;
+            }
         }
 
-        async function save() {
-            await fetch('/api/save_balance', {
+        async function applyPromo() {
+            const code = document.getElementById('promo-input').value;
+            const r = await fetch('/api/use_promo', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ user_id: UID, coins: coins })
+                body: JSON.stringify({ user_id: UID, code: code })
             });
+            const d = await r.json();
+            const msg = document.getElementById('promo-msg');
+            if(d.ok) {
+                coins += d.bonus; document.getElementById('balance').innerText = coins;
+                msg.style.color = "#4ade80"; msg.innerText = "Успішно! +" + d.bonus + " 💰";
+            } else {
+                msg.style.color = "#f87171"; msg.innerText = d.message;
+            }
         }
 
         function handleAction() {
             const btn = document.getElementById('action-btn');
             const st = document.getElementById('status');
             const pop = document.getElementById('my-poplavok');
-            const wat = document.getElementById('water-icon');
-
-            if (!isFishing) {
-                isFishing = true; canPull = false;
+            if(!isFishing) {
+                isFishing = true; st.innerText = "ЧЕКАЄМО НА РИБУ...";
                 btn.innerText = "ЧЕКАЙ..."; btn.disabled = true;
-                st.innerText = "Закидаємо...";
-                pop.style.display = "block"; wat.style.display = "none";
+                pop.style.display = "block";
                 setTimeout(() => {
                     canPull = true; btn.disabled = false;
-                    btn.innerText = "ТЯГНИ!"; pop.className = "bite";
-                    tg.HapticFeedback.notificationOccurred('warning');
-                }, 3000);
-            } else if (canPull) {
+                    btn.innerText = "ТЯГНИ!"; pop.classList.add("bite");
+                    tg.HapticFeedback.impactOccurred('heavy');
+                }, 2000 + Math.random() * 3000);
+            } else if(canPull) {
                 isFishing = false; canPull = false;
-                pop.style.display = "none"; pop.className = ""; wat.style.display = "block";
-                const p = Math.random() > 0.5 ? 10 : -5;
-                coins += p; if (coins < 0) coins = 0;
+                pop.style.display = "none"; pop.classList.remove("bite");
+                const caught = Math.random() > 0.4;
+                if(caught) {
+                    const reward = 10 + Math.floor(Math.random() * 10);
+                    coins += reward; st.innerText = "ВІТАЄМО! + " + reward + " 💰";
+                } else {
+                    st.innerText = "РИБА ВТЕКЛА... 💨";
+                }
                 document.getElementById('balance').innerText = coins;
-                st.innerText = p > 0 ? "Впіймав! +10" : "Сміття! -5";
                 btn.innerText = "ЗАКИНУТИ";
-                save();
+                fetch('/api/save_balance', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ user_id: UID, coins: coins })
+                });
             }
+        }
+
+        function copyRef() {
+            const link = document.getElementById('ref-link').value;
+            tg.showAlert("ВАШЕ ПОСИЛАННЯ:\n" + link);
         }
 
         function tab(id, el) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
-            if(el) el.classList.add('active-nav');
-        }
-
-        function copyRef() {
-            const link = `https://t.me/fishcash_gamebot?start=${UID}`;
-            tg.showAlert("Твоє посилання: " + link);
+            el.classList.add('active-nav');
         }
 
         tg.expand();
