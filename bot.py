@@ -6,22 +6,23 @@ from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# Налаштування (беруться з Railway Variables)
+# Налаштування з Railway
 TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL") 
 MONGO_URL = os.getenv("MONGO_URL")
 PORT = int(os.getenv("PORT", 8080))
 
-# Канал для підписки
+# Канал для обов'язкової підписки
 CHANNELS = [{"url": "https://t.me/vexoo_hub", "id": "@vexoo_hub"}]
+# Система промокодів
 PROMO_CODES = {"hello": 100, "News": 67}
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Підключення до бази (використовуємо стару назву для збереження балансу)
+# ПІДКЛЮЧЕННЯ ДО РЕАЛЬНОЇ БАЗИ ДАНИХ
 client = AsyncIOMotorClient(MONGO_URL, tlsAllowInvalidCertificates=True)
-db = client["fish_cash_test_db"]
+db = client["fish_cash_production"]
 users_col = db["users"]
 
 async def check_subscription(user_id):
@@ -38,10 +39,10 @@ async def check_subscription(user_id):
 async def start_handler(message: types.Message):
     if not await check_subscription(message.from_user.id):
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📢 Підписатися", url=CHANNELS[0]["url"])],
+            [InlineKeyboardButton(text="📢 Підписатися на Vexoo Hub", url=CHANNELS[0]["url"])],
             [InlineKeyboardButton(text="✅ Перевірити підписку", callback_data="check_sub")]
         ])
-        await message.answer("🌊 Для входу підпишіться на канал:", reply_markup=kb)
+        await message.answer("🌊 Вітаємо! Для початку гри підпишіться на наш канал:", reply_markup=kb)
         return
     await show_main_menu(message)
 
@@ -51,12 +52,13 @@ async def process_check_sub(callback: types.CallbackQuery):
         await callback.message.delete()
         await show_main_menu(callback.message)
     else:
-        await callback.answer("❌ Ви не підписані!", show_alert=True)
+        await callback.answer("❌ Ви ще не підписалися!", show_alert=True)
 
 async def show_main_menu(message: types.Message):
     u_id = str(message.chat.id)
     user = await users_col.find_one({"user_id": u_id})
     if not user:
+        # Початковий баланс для нових гравців
         await users_col.insert_one({
             "user_id": u_id, 
             "coins": 100, 
@@ -66,9 +68,9 @@ async def show_main_menu(message: types.Message):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎣 Відкрити Озеро", web_app=WebAppInfo(url=WEBAPP_URL))]
     ])
-    await bot.send_message(message.chat.id, "Вудка готова! Натискай кнопку нижче:", reply_markup=kb)
+    await bot.send_message(message.chat.id, f"Привіт, {message.chat.first_name}! Твоя вудка готова.", reply_markup=kb)
 
-# API
+# API для WebApp
 async def get_balance(request):
     user_id = request.query.get("user_id")
     user = await users_col.find_one({"user_id": str(user_id)})
