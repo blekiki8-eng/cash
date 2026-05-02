@@ -3,41 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fish Cash Game</title>
+    <title>Fish Cash Real</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 100px; overflow: hidden; }
+        /* Дозволяємо гортати вниз */
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 120px; overflow-y: auto; }
+        
         .tab-content { display: none; flex-direction: column; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; }
         .active { display: flex; }
         
-        /* Профіль */
         .stat-card { background: var(--card); border-radius: 20px; padding: 15px; width: 100%; margin-bottom: 15px; border: 1px solid #334155; }
         .row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; }
         .val { color: var(--primary); font-weight: bold; }
         
-        /* Озеро */
+        /* Озеро та вільний поплавок */
         #lake { 
-            width: 300px; height: 300px; 
+            width: 280px; height: 280px; 
             background: radial-gradient(circle at 30% 30%, #00f2fe, #004e92);
             border-radius: 50%; margin: 20px auto; position: relative;
-            box-shadow: 0 0 50px rgba(0, 210, 255, 0.3); overflow: hidden;
+            box-shadow: 0 0 40px rgba(0, 210, 255, 0.2); overflow: hidden;
         }
-        #my-poplavok { width: 60px; height: 60px; position: absolute; display: none; z-index: 10; transition: 0.3s; }
+        #my-poplavok { width: 60px; height: 60px; position: absolute; display: none; z-index: 10; }
         .bite { animation: shake 0.2s infinite; }
         @keyframes shake { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
 
-        /* Кнопки та UI */
-        .game-btn { background: linear-gradient(135deg, #00d2ff, #3a7bd5); color: white; border: none; padding: 18px; border-radius: 50px; width: 100%; font-size: 16px; font-weight: bold; }
-        input { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 12px; width: 60%; }
-        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #1e293b; padding-bottom: 25px; border-top: 1px solid #334155; }
-        .nav-item { flex: 1; text-align: center; padding: 15px; color: #94a3b8; font-size: 11px; }
+        .game-btn { background: linear-gradient(135deg, #00d2ff, #3a7bd5); color: white; border: none; padding: 18px; border-radius: 50px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .promo-btn { background: #334155; border: none; color: white; padding: 10px 15px; border-radius: 10px; margin-left: 5px; }
+        input { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 12px; flex-grow: 1; }
+
+        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #1e293b; padding-bottom: 30px; border-top: 1px solid #334155; z-index: 100; }
+        .nav-item { flex: 1; text-align: center; padding: 15px; color: #94a3b8; font-size: 12px; }
         .active-nav { color: var(--primary); font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- ПРОФІЛЬ -->
     <div id="profile" class="tab-content">
         <h2>ПРОФІЛЬ</h2>
         <div class="stat-card">
@@ -45,28 +46,36 @@
             <div class="row"><span>🆔 ID:</span><span id="u-id" class="val">...</span></div>
             <div class="row"><span>💰 Баланс:</span><span id="balance" class="val">0</span></div>
         </div>
+        
         <div class="stat-card">
             <p style="font-size: 11px; color: #94a3b8;">РЕФЕРАЛЬНЕ ПОСИЛАННЯ:</p>
             <input type="text" id="ref-link" readonly style="width: 100%; font-size: 10px; margin-bottom: 10px;">
             <button class="game-btn" onclick="copyRef()" style="padding: 10px; font-size: 12px;">КОПІЮВАТИ</button>
         </div>
+
+        <div class="stat-card">
+            <p style="margin-bottom: 10px;">🎁 ПРОМОКОД:</p>
+            <div style="display: flex;">
+                <input type="text" id="promo-input" placeholder="Введіть код...">
+                <button class="promo-btn" onclick="applyPromo()">ОК</button>
+            </div>
+            <div id="promo-msg" style="font-size: 11px; margin-top: 8px;"></div>
+        </div>
     </div>
 
-    <!-- ОЗЕРО -->
     <div id="fishing" class="tab-content active">
         <h2>ОЗЕРО</h2>
         <div id="lake">
             <img src="poplavok.png" id="my-poplavok">
-            <div style="position: absolute; width: 100%; text-align: center; top: 40%; opacity: 0.2; font-size: 50px;">🌊</div>
+            <div style="position: absolute; width: 100%; text-align: center; top: 45%; opacity: 0.1; font-size: 40px;">🌊</div>
         </div>
         <div id="status" style="margin-bottom: 20px; font-weight: bold; color: #94a3b8;">ГОТОВИЙ?</div>
         <button id="action-btn" class="game-btn" onclick="handleAction()">ЗАКИНУТИ ВУДКУ</button>
     </div>
 
-    <!-- МАРКЕТ -->
     <div id="market" class="tab-content">
         <h2>МАРКЕТ</h2>
-        <div class="stat-card">🛒 Магазин в розробці...</div>
+        <div class="stat-card" style="text-align: center; padding: 50px 20px;">🛒 Незабаром тут будуть нові вудки!</div>
     </div>
 
     <div class="nav">
@@ -80,13 +89,13 @@
         const UID = String(tg.initDataUnsafe?.user?.id || "000000");
         let coins = 0, isFishing = false, canPull = false;
 
-        // ВСТАНОВЛЕНІ ЦІНИ
-        const FISH_TYPES = [
-            { name: "🪱 Старий черевик", price: -5, chance: 0.1 },
-            { name: "🐟 Плітка", price: 10, chance: 0.4 },
-            { name: "🐠 Окунь", price: 25, chance: 0.3 },
-            { name: "🐡 Короп", price: 50, chance: 0.15 },
-            { name: "🦈 Щука", price: 150, chance: 0.05 }
+        // ВСТАНОВЛЕНІ ЦІНИ ТА ШАНСИ
+        const LOOT_TABLE = [
+            { name: "🐟 Маленький карасик", price: 15, chance: 0.3 },
+            { name: "🐠 Маленький окунь", price: 10, chance: 0.3 },
+            { name: "🏆 ХАРОШИЙ КАРАСЬ", price: 67, chance: 0.0001 },
+            { name: "🍾 Бутилка", price: -15, chance: 0.2 },
+            { name: "🛍️ Пакет", price: -10, chance: 0.2 }
         ];
 
         async function load() {
@@ -101,6 +110,22 @@
             }
         }
 
+        async function applyPromo() {
+            const code = document.getElementById('promo-input').value;
+            const r = await fetch('/api/use_promo', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ user_id: UID, code: code })
+            });
+            const d = await r.json();
+            const msg = document.getElementById('promo-msg');
+            if(d.ok) {
+                coins += d.bonus; document.getElementById('balance').innerText = coins;
+                msg.style.color = "#4ade80"; msg.innerText = "Успішно! +" + d.bonus;
+            } else {
+                msg.style.color = "#f87171"; msg.innerText = d.message;
+            }
+        }
+
         function handleAction() {
             const btn = document.getElementById('action-btn');
             const st = document.getElementById('status');
@@ -108,50 +133,40 @@
             const lake = document.getElementById('lake');
 
             if(!isFishing) {
-                isFishing = true;
-                st.innerText = "ЗАКИНУТО... ЧЕКАЙ!";
-                btn.innerText = "ЧЕКАЙ...";
-                btn.disabled = true;
+                isFishing = true; st.innerText = "ЧЕКАЄМО...";
+                btn.innerText = "ЧЕКАЙ..."; btn.disabled = true;
 
-                // РАНДОМНЕ МІСЦЕ (по всьому озеру)
-                const maxX = lake.clientWidth - 60;
-                const maxY = lake.clientHeight - 60;
+                // Випадкове розташування поплавка по всьому озеру
+                const maxX = lake.clientWidth - 70;
+                const maxY = lake.clientHeight - 70;
                 pop.style.left = Math.floor(Math.random() * maxX) + "px";
                 pop.style.top = Math.floor(Math.random() * maxY) + "px";
                 pop.style.display = "block";
 
                 setTimeout(() => {
-                    canPull = true;
-                    btn.disabled = false;
-                    btn.innerText = "ТЯГНИ!";
-                    pop.classList.add("bite");
+                    canPull = true; btn.disabled = false;
+                    btn.innerText = "ТЯГНИ!"; pop.classList.add("bite");
                     tg.HapticFeedback.notificationOccurred('warning');
-                }, 2000 + Math.random() * 3000);
+                }, 2000 + Math.random() * 2000);
 
             } else if(canPull) {
-                isFishing = false;
-                canPull = false;
-                pop.style.display = "none";
-                pop.classList.remove("bite");
+                isFishing = false; canPull = false;
+                pop.style.display = "none"; pop.classList.remove("bite");
 
-                // Логіка цін
                 let rand = Math.random();
-                let cumulativeChance = 0;
-                let fish = null;
+                let cumulative = 0;
+                let caught = null;
 
-                for (let f of FISH_TYPES) {
-                    cumulativeChance += f.chance;
-                    if (rand <= cumulativeChance) {
-                        fish = f;
-                        break;
-                    }
+                for (let item of LOOT_TABLE) {
+                    cumulative += item.chance;
+                    if (rand <= cumulative) { caught = item; break; }
                 }
 
-                if (fish) {
-                    coins += fish.price;
-                    st.innerText = `${fish.name}! (${fish.price > 0 ? '+' : ''}${fish.price} 💰)`;
+                if (caught) {
+                    coins += caught.price;
+                    st.innerText = `${caught.name}! (${caught.price > 0 ? '+' : ''}${caught.price} 💰)`;
                 } else {
-                    st.innerText = "РИБА ВТЕКЛА...";
+                    st.innerText = "Сьогодні без улову... 💨";
                 }
 
                 if (coins < 0) coins = 0;
@@ -159,8 +174,7 @@
                 btn.innerText = "ЗАКИНУТИ ВУДКУ";
 
                 fetch('/api/save_balance', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user_id: UID, coins: coins })
                 });
             }
