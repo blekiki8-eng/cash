@@ -1,12 +1,12 @@
 import os
 import asyncio
-import random
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
 from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 from motor.motor_asyncio import AsyncIOMotorClient
 
+# Константи
 TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL") 
 MONGO_URL = os.getenv("MONGO_URL")
@@ -15,27 +15,24 @@ PORT = int(os.getenv("PORT", 8080))
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Ініціалізація БД
+# ПІДКЛЮЧЕННЯ ДО СТАРОЇ БАЗИ (щоб повернути баланс)
 client = AsyncIOMotorClient(MONGO_URL, tlsAllowInvalidCertificates=True)
-db = client["fish_cash_final"]
+db = client["fish_cash_final"] 
 users_col = db["users"]
 market_col = db["market"]
-
-# Прайс-лист
-FISH_DATA = {
-    "fish_small": {"price": 5, "chance": 0.70},
-    "fish_karas": {"price": 10, "chance": 0.2999},
-    "fish_pike": {"price": 100, "chance": 0.0001}
-}
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     u_id = str(message.from_user.id)
-    u_name = message.from_user.full_name or "Fisherman"
+    u_name = message.from_user.full_name or "Рибалка"
+    
+    # Рефералка
     args = message.text.split()
     referrer = args[1] if len(args) > 1 else None
 
     user = await users_col.find_one({"user_id": u_id})
+    
+    # Якщо користувача немає (зовсім новий), створюємо профіль
     if not user:
         await users_col.insert_one({
             "user_id": u_id, "coins": 100, "lang": "uk",
@@ -44,10 +41,18 @@ async def start_handler(message: types.Message):
         if referrer and referrer != u_id:
             await users_col.update_one({"user_id": referrer}, {"$inc": {"coins": 50, "referrals": 1}})
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎣 Грати", web_app=WebAppInfo(url=WEBAPP_URL))]])
-    await message.answer(f"Привіт, {u_name}! Твій ID: {u_id}", reply_markup=kb)
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🎣 Ловити рибу", web_app=WebAppInfo(url=WEBAPP_URL))
+    ]])
+    
+    # Твій текст при старті
+    await message.answer(
+        f"Привіт! Негайно лови рибу, поки не почався сезон риболовлі! 🌊🎣\n\nТвій ID: `{u_id}`", 
+        reply_markup=kb, 
+        parse_mode="Markdown"
+    )
 
-# --- API ---
+# --- API (стандартні методи) ---
 async def get_user_data(request):
     user_id = request.query.get("user_id")
     user = await users_col.find_one({"user_id": str(user_id)})
@@ -63,15 +68,16 @@ async def save_user_data(request):
 async def sell_to_system(request):
     data = await request.json()
     u_id, item_id = str(data.get("user_id")), data.get("item_id")
-    price = FISH_DATA.get(item_id, {}).get("price", 5)
+    # Ціни викупу
+    prices = {"fish_small": 5, "fish_karas": 15, "fish_pike": 120}
+    price = prices.get(item_id, 5)
     user = await users_col.find_one({"user_id": u_id})
     inv = user.get("inventory", [])
     for idx, item in enumerate(inv):
         if item["id"] == item_id:
             inv.pop(idx)
-            new_bal = user['coins'] + price
             await users_col.update_one({"user_id": u_id}, {"$set": {"inventory": inv}, "$inc": {"coins": price}})
-            return web.json_response({"ok": True, "new_balance": new_bal})
+            return web.json_response({"ok": True, "new_balance": user['coins'] + price})
     return web.json_response({"ok": False})
 
 async def list_on_market(request):
@@ -83,7 +89,7 @@ async def list_on_market(request):
         if item["id"] == item_id:
             inv.pop(idx)
             await users_col.update_one({"user_id": u_id}, {"$set": {"inventory": inv}})
-            await market_col.insert_one({"seller_id": u_id, "seller_name": user.get("name", "Fisherman"), "item_id": item_id, "price": price})
+            await market_col.insert_one({"seller_id": u_id, "seller_name": user.get("name"), "item_id": item_id, "price": price})
             return web.json_response({"ok": True})
     return web.json_response({"ok": False})
 
@@ -107,7 +113,7 @@ async def buy_from_market(request):
 
 app = web.Application()
 app.router.add_get('/', lambda r: web.FileResponse('index.html'))
-app.router.add_get('/poplavok.png', lambda r: web.FileResponse('poplavok.png')) # РОУТ КАРТИНКИ
+app.router.add_get('/poplavok.png', lambda r: web.FileResponse('poplavok.png'))
 app.router.add_get('/api/get_user', get_user_data)
 app.router.add_post('/api/save_user', save_user_data)
 app.router.add_post('/api/sell_system', sell_to_system)
@@ -120,4 +126,5 @@ async def main():
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
     await dp.start_polling(bot)
 
-if __name__ == '__main__': asyncio.run(main())
+if __name__ == '__main__':
+    asyncio.run(main())
