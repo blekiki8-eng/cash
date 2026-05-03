@@ -10,20 +10,16 @@
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 80px; overflow-x: hidden; }
         .tab-content { display: none; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; box-sizing: border-box; }
         .active { display: flex; }
-        
         #lake { width: 250px; height: 250px; background: radial-gradient(circle, #00f2fe, #004e92); border-radius: 50%; margin: 20px; border: 4px solid #1e293b; position: relative; overflow: hidden; }
         #poplavok { width: 45px; height: 45px; position: absolute; display: none; transition: all 0.5s ease; filter: drop-shadow(0 2px 5px black); }
         .bite { animation: shake 0.2s infinite; }
         @keyframes shake { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(0,8px); } }
-
         .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
         .slot { background: var(--card); padding: 10px; border-radius: 12px; text-align: center; font-size: 11px; border: 1px solid #334155; }
-        
         .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #1e293b; padding-bottom: 20px; border-top: 1px solid #334155; z-index: 100; }
         .nav-item { flex: 1; text-align: center; padding: 15px; color: #94a3b8; font-size: 10px; }
         .active-nav { color: var(--primary); font-weight: bold; }
-        
-        .main-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; width: 90%; }
+        .main-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; width: 90%; cursor: pointer; }
         .btn-sml { border: none; color: white; padding: 6px; border-radius: 8px; font-size: 10px; width: 100%; margin-top: 5px; cursor: pointer; }
     </style>
 </head>
@@ -52,8 +48,8 @@
             <p>👤 <span id="l-name">Ім'я</span>: <b id="u-name">...</b></p>
             <p>🆔 ID: <b id="u-id">...</b></p>
             <p>💰 <span id="l-bal">Баланс</span>: <b id="balance" style="color:var(--primary)">0</b></p>
-            <hr color="#334155">
-            <button class="main-btn" style="width:100%; margin-bottom:10px;" onclick="shareRef()">📤 ЗАПРОСИТИ ДРУЗІВ</button>
+            <hr color="#334155" style="margin: 15px 0;">
+            <button class="main-btn" style="width:100%;" onclick="shareRef()">📤 ЗАПРОСИТИ ДРУЗІВ</button>
         </div>
     </div>
 
@@ -92,11 +88,12 @@
         }
 
         function shareRef() {
-            // Оновлене посилання на правильного бота
+            // Посилання на продакшн-бота
             const url = `https://t.me/fishcash_gamebot?start=${UID}`;
-            tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent("Давай ловити рибу разом у FishCash!")}`);
+            tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent("Ставай кращим рибалкою у FishCash! 🎣")}`);
         }
 
+        // --- Логіка гри ---
         function startFishing() {
             const btn = document.getElementById('action-btn'), p = document.getElementById('poplavok'), st = document.getElementById('status'), t = i18n[lang];
             if (!isFishing) {
