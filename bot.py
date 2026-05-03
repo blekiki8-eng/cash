@@ -6,7 +6,7 @@ from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# Налаштування (беруться з системних змінних)
+# Константи беруться з налаштувань сервера (Environment Variables)
 TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL") 
 MONGO_URL = os.getenv("MONGO_URL")
@@ -15,13 +15,13 @@ PORT = int(os.getenv("PORT", 8080))
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Підключення до БД
+# Підключення до MongoDB
 client = AsyncIOMotorClient(MONGO_URL, tlsAllowInvalidCertificates=True)
-db = client["fish_cash_game"] # Назва бази даних
+db = client["fish_cash_gamebot_db"] # Нова назва бази для нового бота
 users_col = db["users"]
 market_col = db["market"]
 
-# Ціни на рибу (системний викуп)
+# Системні ціни на рибу
 FISH_DATA = {
     "fish_small": {"price": 5},
     "fish_karas": {"price": 15},
@@ -31,31 +31,27 @@ FISH_DATA = {
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     u_id = str(message.from_user.id)
-    u_name = message.from_user.full_name or "Fisherman"
+    u_name = message.from_user.full_name or "Рибалка"
     
-    # Реферальна система
+    # Реферальний код
     args = message.text.split()
     referrer = args[1] if len(args) > 1 else None
 
     user = await users_col.find_one({"user_id": u_id})
     if not user:
         await users_col.insert_one({
-            "user_id": u_id, 
-            "coins": 100, 
-            "lang": "uk",
-            "name": u_name, 
-            "inventory": [], 
-            "referrals": 0
+            "user_id": u_id, "coins": 100, "lang": "uk",
+            "name": u_name, "inventory": [], "referrals": 0
         })
         if referrer and referrer != u_id:
             await users_col.update_one({"user_id": referrer}, {"$inc": {"coins": 50, "referrals": 1}})
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🎣 Почати риболовлю", web_app=WebAppInfo(url=WEBAPP_URL))
+        InlineKeyboardButton(text="🎣 Грати у FishCash", web_app=WebAppInfo(url=WEBAPP_URL))
     ]])
-    await message.answer(f"Привіт, {u_name}!\nТвій ID: `{u_id}`\nГотовий наловити риби?", reply_markup=kb, parse_mode="Markdown")
+    await message.answer(f"Вітаємо у @fishcash_gamebot!\nТвій ID: `{u_id}`", reply_markup=kb, parse_mode="Markdown")
 
-# --- API Ротінг ---
+# --- API ---
 async def get_user_data(request):
     user_id = request.query.get("user_id")
     user = await users_col.find_one({"user_id": str(user_id)})
@@ -90,12 +86,7 @@ async def list_on_market(request):
         if item["id"] == item_id:
             inv.pop(idx)
             await users_col.update_one({"user_id": u_id}, {"$set": {"inventory": inv}})
-            await market_col.insert_one({
-                "seller_id": u_id, 
-                "seller_name": user.get("name", "Fisherman"), 
-                "item_id": item_id, 
-                "price": price
-            })
+            await market_col.insert_one({"seller_id": u_id, "seller_name": user.get("name"), "item_id": item_id, "price": price})
             return web.json_response({"ok": True})
     return web.json_response({"ok": False})
 
