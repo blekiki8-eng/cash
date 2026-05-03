@@ -6,7 +6,6 @@ from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# Константи
 TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL") 
 MONGO_URL = os.getenv("MONGO_URL")
@@ -15,7 +14,7 @@ PORT = int(os.getenv("PORT", 8080))
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# ПІДКЛЮЧЕННЯ ДО СТАРОЇ БАЗИ (щоб повернути баланс)
+# Використовуємо стару базу для збереження балансів
 client = AsyncIOMotorClient(MONGO_URL, tlsAllowInvalidCertificates=True)
 db = client["fish_cash_final"] 
 users_col = db["users"]
@@ -26,13 +25,10 @@ async def start_handler(message: types.Message):
     u_id = str(message.from_user.id)
     u_name = message.from_user.full_name or "Рибалка"
     
-    # Рефералка
     args = message.text.split()
     referrer = args[1] if len(args) > 1 else None
 
     user = await users_col.find_one({"user_id": u_id})
-    
-    # Якщо користувача немає (зовсім новий), створюємо профіль
     if not user:
         await users_col.insert_one({
             "user_id": u_id, "coins": 100, "lang": "uk",
@@ -45,14 +41,14 @@ async def start_handler(message: types.Message):
         InlineKeyboardButton(text="🎣 Ловити рибу", web_app=WebAppInfo(url=WEBAPP_URL))
     ]])
     
-    # Твій текст при старті
+    # Оновлений текст привітання під нового бота
     await message.answer(
-        f"Привіт! Негайно лови рибу, поки не почався сезон риболовлі! 🌊🎣\n\nТвій ID: `{u_id}`", 
+        f"Привіт! Негайно лови рибу, поки не почався сезон риболовлі! 🌊🎣\n\nТвій ID: `{u_id}`\nБот: @fishcash_gamebot", 
         reply_markup=kb, 
         parse_mode="Markdown"
     )
 
-# --- API (стандартні методи) ---
+# --- API Методи ---
 async def get_user_data(request):
     user_id = request.query.get("user_id")
     user = await users_col.find_one({"user_id": str(user_id)})
@@ -68,7 +64,6 @@ async def save_user_data(request):
 async def sell_to_system(request):
     data = await request.json()
     u_id, item_id = str(data.get("user_id")), data.get("item_id")
-    # Ціни викупу
     prices = {"fish_small": 5, "fish_karas": 15, "fish_pike": 120}
     price = prices.get(item_id, 5)
     user = await users_col.find_one({"user_id": u_id})
