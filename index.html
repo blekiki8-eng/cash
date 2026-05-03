@@ -7,7 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 80px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 80px; overflow-x: hidden; }
         .tab-content { display: none; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; box-sizing: border-box; }
         .active { display: flex; }
         
@@ -19,16 +19,12 @@
         .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
         .slot { background: var(--card); padding: 10px; border-radius: 12px; text-align: center; font-size: 11px; border: 1px solid #334155; }
         
-        .filter-bar { display: flex; gap: 5px; margin-bottom: 10px; width: 100%; overflow-x: auto; }
-        .filter-btn { background: #334155; color: white; border: none; padding: 5px 12px; border-radius: 15px; font-size: 10px; }
-        .filter-active { background: var(--primary); }
-
-        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #1e293b; padding-bottom: 20px; border-top: 1px solid #334155; }
+        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #1e293b; padding-bottom: 20px; border-top: 1px solid #334155; z-index: 100; }
         .nav-item { flex: 1; text-align: center; padding: 15px; color: #94a3b8; font-size: 10px; }
         .active-nav { color: var(--primary); font-weight: bold; }
         
         .main-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; width: 90%; }
-        .btn-sml { border: none; color: white; padding: 6px; border-radius: 8px; font-size: 10px; width: 100%; margin-top: 5px; }
+        .btn-sml { border: none; color: white; padding: 6px; border-radius: 8px; font-size: 10px; width: 100%; margin-top: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -47,12 +43,6 @@
 
     <div id="market-tab" class="tab-content" style="width:100%">
         <h2 id="l-market">РИНОК</h2>
-        <div class="filter-bar">
-            <button class="filter-btn filter-active" onclick="filterMarket('all', this)">Все</button>
-            <button class="filter-btn" onclick="filterMarket('fish_small', this)">Мала</button>
-            <button class="filter-btn" onclick="filterMarket('fish_karas', this)">Карась</button>
-            <button class="filter-btn" onclick="filterMarket('fish_pike', this)">Щука</button>
-        </div>
         <div id="market-list" style="width:100%"></div>
     </div>
 
@@ -63,11 +53,7 @@
             <p>🆔 ID: <b id="u-id">...</b></p>
             <p>💰 <span id="l-bal">Баланс</span>: <b id="balance" style="color:var(--primary)">0</b></p>
             <hr color="#334155">
-            <button class="main-btn" style="width:100%; margin-bottom:10px;" onclick="shareRef()">📤 ПОДІЛИТИСЯ</button>
-            <div style="text-align:center">
-                <button style="background:none; border:1px solid var(--primary); color:white; padding:5px 10px; border-radius:5px;" onclick="setLang('uk')">UA</button>
-                <button style="background:none; border:1px solid var(--primary); color:white; padding:5px 10px; border-radius:5px;" onclick="setLang('en')">EN</button>
-            </div>
+            <button class="main-btn" style="width:100%; margin-bottom:10px;" onclick="shareRef()">📤 ЗАПРОСИТИ ДРУЗІВ</button>
         </div>
     </div>
 
@@ -81,7 +67,7 @@
     <script>
         const tg = window.Telegram.WebApp;
         const UID = String(tg.initDataUnsafe?.user?.id || "000000");
-        let coins = 0, inv = [], lang = 'uk', isFishing = false, marketData = [];
+        let coins = 0, inv = [], lang = 'uk', isFishing = false;
 
         const i18n = {
             uk: { cast: "ЗАКИНУТИ", pull: "ТЯГНИ!", wait: "Чекай...", bite: "КЛЮЄ!", lake: "ОЗЕРО", inv: "СКЛАД", market: "РИНОК", prof: "ПРОФІЛЬ", name: "Ім'я", bal: "Баланс", fish_small: "Мала рибка", fish_karas: "Карась", fish_pike: "ЩУКА" },
@@ -99,45 +85,27 @@
 
         function updateUI() {
             const t = i18n[lang];
-            document.getElementById('l-lake').innerText = t.lake;
-            document.getElementById('l-inv').innerText = t.inv;
-            document.getElementById('l-market').innerText = t.market;
-            document.getElementById('l-prof').innerText = t.prof;
-            document.getElementById('l-name').innerText = t.name;
-            document.getElementById('l-bal').innerText = t.bal;
             document.getElementById('balance').innerText = coins;
             document.getElementById('u-id').innerText = UID;
             document.getElementById('u-name').innerText = tg.initDataUnsafe?.user?.first_name || "Рибалка";
-            document.getElementById('status').innerText = t.wait;
             document.getElementById('action-btn').innerText = isFishing ? t.pull : t.cast;
         }
 
-        function setLang(l) {
-            lang = l; updateUI();
-            fetch('/api/save_user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: UID, lang: l}) });
-        }
-
         function shareRef() {
-            // ОНОВЛЕНО НА @fishcash_gamebot
+            // Оновлене посилання на правильного бота
             const url = `https://t.me/fishcash_gamebot?start=${UID}`;
-            tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent("Ходімо рибалити разом!")}`);
+            tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent("Давай ловити рибу разом у FishCash!")}`);
         }
 
-        // --- Логіка гри та ринку (без змін) ---
         function startFishing() {
             const btn = document.getElementById('action-btn'), p = document.getElementById('poplavok'), st = document.getElementById('status'), t = i18n[lang];
             if (!isFishing) {
                 isFishing = true; btn.innerText = t.pull; btn.disabled = true;
                 p.style.display = "block"; p.style.left = "105px"; p.style.top = "105px";
-                let moves = 0;
-                const mi = setInterval(() => {
-                    p.style.left = (Math.random() * 160 + 20) + "px";
-                    p.style.top = (Math.random() * 160 + 20) + "px";
-                    if (++moves >= 4) {
-                        clearInterval(mi); p.classList.add("bite"); st.innerText = t.bite; btn.disabled = false;
-                        tg.HapticFeedback.notificationOccurred('success');
-                    }
-                }, 800);
+                setTimeout(() => {
+                    p.classList.add("bite"); st.innerText = t.bite; btn.disabled = false;
+                    tg.HapticFeedback.notificationOccurred('success');
+                }, 2000 + Math.random() * 3000);
             } else {
                 isFishing = false; p.style.display = "none"; p.classList.remove("bite");
                 let fId = Math.random() < 0.1 ? "fish_pike" : (Math.random() < 0.4 ? "fish_karas" : "fish_small");
@@ -159,19 +127,10 @@
 
         async function loadMarket() {
             const r = await fetch('/api/get_market');
-            marketData = await r.json();
-            filterMarket('all');
-        }
-
-        function filterMarket(type, btn) {
-            if(btn) {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('filter-active'));
-                btn.classList.add('filter-active');
-            }
+            const lots = await r.json();
             const list = document.getElementById('market-list');
             list.innerHTML = "";
-            const filtered = type === 'all' ? marketData : marketData.filter(l => l.item_id === type);
-            filtered.forEach(lot => {
+            lots.forEach(lot => {
                 list.innerHTML += `<div style="background:var(--card); padding:10px; margin:5px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
                     <span><b>${i18n[lang][lot.item_id]}</b><br><small>${lot.seller_name}</small></span>
                     <span><b>${lot.price} 💰</b> <button class="btn-sml" style="background:#3b82f6; width:50px" onclick='buyItem(${JSON.stringify(lot)})'>BUY</button></span>
@@ -179,22 +138,22 @@
             });
         }
 
-        async function buyItem(lot) {
-            const r = await fetch('/api/buy_item', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: UID, lot: lot}) });
-            if((await r.json()).ok) load();
-        }
-
         async function sellSystem(id, idx) {
             const r = await fetch('/api/sell_system', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: UID, item_id: id}) });
             const d = await r.json();
-            if(d.ok) { inv.splice(idx,1); renderInv(); coins = d.new_balance; document.getElementById('balance').innerText = coins; }
+            if(d.ok) { inv.splice(idx,1); coins = d.new_balance; updateUI(); renderInv(); }
         }
 
         async function listMarket(id, idx) {
-            const pr = prompt("Ціна:");
+            const pr = prompt("Введіть ціну продажу:");
             if(!pr || isNaN(pr)) return;
             const r = await fetch('/api/list_item', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: UID, item_id: id, price: pr}) });
             if((await r.json()).ok) { inv.splice(idx,1); renderInv(); }
+        }
+
+        async function buyItem(lot) {
+            const r = await fetch('/api/buy_item', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: UID, lot: lot}) });
+            if((await r.json()).ok) load();
         }
 
         function tab(id, el) {
