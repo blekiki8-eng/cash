@@ -6,7 +6,6 @@ from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# Константи (налаштовуються на хостингу)
 TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL") 
 MONGO_URL = os.getenv("MONGO_URL")
@@ -15,25 +14,23 @@ PORT = int(os.getenv("PORT", 8080))
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Підключення до БД (Використовуємо ту саму назву, щоб зберегти логіку)
+# ВАЖЛИВО: Повернув назву бази fish_cash_final, щоб повернулися коіни гравців
 client = AsyncIOMotorClient(MONGO_URL, tlsAllowInvalidCertificates=True)
-db = client["fish_cash_final"] # Залишаємо назву бази для стабільності
+db = client["fish_cash_final"] 
 users_col = db["users"]
 market_col = db["market"]
 
-# Ціни для системного викупу
 FISH_DATA = {
     "fish_small": {"price": 5},
-    "fish_karas": {"price": 10},
-    "fish_pike": {"price": 100}
+    "fish_karas": {"price": 15},
+    "fish_pike": {"price": 120}
 }
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     u_id = str(message.from_user.id)
-    u_name = message.from_user.full_name or "Fisherman"
+    u_name = message.from_user.full_name or "Рибалка"
     
-    # Рефералка
     args = message.text.split()
     referrer = args[1] if len(args) > 1 else None
 
@@ -46,14 +43,18 @@ async def start_handler(message: types.Message):
         if referrer and referrer != u_id:
             await users_col.update_one({"user_id": referrer}, {"$inc": {"coins": 50, "referrals": 1}})
 
-    # Клавіатура з WebApp
     kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🎣 Грати у FishCash", web_app=WebAppInfo(url=WEBAPP_URL))
+        InlineKeyboardButton(text="🎣 Ловити рибу", web_app=WebAppInfo(url=WEBAPP_URL))
     ]])
     
-    await message.answer(f"Привіт, {u_name}!\nТвій ID: `{u_id}`\n\nНатискай кнопку нижче, щоб почати рибалити!", reply_markup=kb, parse_mode="Markdown")
+    # Нове привітання
+    await message.answer(
+        f"Привіт! Негайно лови рибу, поки не почався сезон риболовлі! 🌊🎣\n\nТвій ID: `{u_id}`", 
+        reply_markup=kb, 
+        parse_mode="Markdown"
+    )
 
-# --- API Методи ---
+# --- API Ротінг (без змін для стабільності) ---
 async def get_user_data(request):
     user_id = request.query.get("user_id")
     user = await users_col.find_one({"user_id": str(user_id)})
@@ -75,9 +76,8 @@ async def sell_to_system(request):
     for idx, item in enumerate(inv):
         if item["id"] == item_id:
             inv.pop(idx)
-            new_bal = user['coins'] + price
             await users_col.update_one({"user_id": u_id}, {"$set": {"inventory": inv}, "$inc": {"coins": price}})
-            return web.json_response({"ok": True, "new_balance": new_bal})
+            return web.json_response({"ok": True, "new_balance": user['coins'] + price})
     return web.json_response({"ok": False})
 
 async def list_on_market(request):
@@ -89,12 +89,7 @@ async def list_on_market(request):
         if item["id"] == item_id:
             inv.pop(idx)
             await users_col.update_one({"user_id": u_id}, {"$set": {"inventory": inv}})
-            await market_col.insert_one({
-                "seller_id": u_id, 
-                "seller_name": user.get("name", "Fisherman"), 
-                "item_id": item_id, 
-                "price": price
-            })
+            await market_col.insert_one({"seller_id": u_id, "seller_name": user.get("name"), "item_id": item_id, "price": price})
             return web.json_response({"ok": True})
     return web.json_response({"ok": False})
 
