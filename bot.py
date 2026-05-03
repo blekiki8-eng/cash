@@ -6,106 +6,129 @@ from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# Налаштування з Railway
+# Налаштування (беруться з системних змінних)
 TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL") 
 MONGO_URL = os.getenv("MONGO_URL")
 PORT = int(os.getenv("PORT", 8080))
 
-# Канал для обов'язкової підписки
-CHANNELS = [{"url": "https://t.me/vexoo_hub", "id": "@vexoo_hub"}]
-# Система промокодів
-PROMO_CODES = {"hello": 100, "News": 67}
-
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# ПІДКЛЮЧЕННЯ ДО РЕАЛЬНОЇ БАЗИ ДАНИХ
+# Підключення до БД
 client = AsyncIOMotorClient(MONGO_URL, tlsAllowInvalidCertificates=True)
-db = client["fish_cash_production"]
+db = client["fish_cash_game"] # Назва бази даних
 users_col = db["users"]
+market_col = db["market"]
 
-async def check_subscription(user_id):
-    for channel in CHANNELS:
-        try:
-            member = await bot.get_chat_member(chat_id=channel["id"], user_id=user_id)
-            if member.status in ["member", "administrator", "creator"]:
-                return True
-        except Exception:
-            return False
-    return False
+# Ціни на рибу (системний викуп)
+FISH_DATA = {
+    "fish_small": {"price": 5},
+    "fish_karas": {"price": 15},
+    "fish_pike": {"price": 120}
+}
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
-    if not await check_subscription(message.from_user.id):
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📢 Підписатися на Vexoo Hub", url=CHANNELS[0]["url"])],
-            [InlineKeyboardButton(text="✅ Перевірити підписку", callback_data="check_sub")]
-        ])
-        await message.answer("🌊 Вітаємо! Для початку гри підпишіться на наш канал:", reply_markup=kb)
-        return
-    await show_main_menu(message)
+    u_id = str(message.from_user.id)
+    u_name = message.from_user.full_name or "Fisherman"
+    
+    # Реферальна система
+    args = message.text.split()
+    referrer = args[1] if len(args) > 1 else None
 
-@dp.callback_query(lambda c: c.data == "check_sub")
-async def process_check_sub(callback: types.CallbackQuery):
-    if await check_subscription(callback.from_user.id):
-        await callback.message.delete()
-        await show_main_menu(callback.message)
-    else:
-        await callback.answer("❌ Ви ще не підписалися!", show_alert=True)
-
-async def show_main_menu(message: types.Message):
-    u_id = str(message.chat.id)
     user = await users_col.find_one({"user_id": u_id})
     if not user:
-        # Початковий баланс для нових гравців
         await users_col.insert_one({
             "user_id": u_id, 
             "coins": 100, 
-            "name": message.chat.full_name or "Рибалка",
-            "used_promos": []
+            "lang": "uk",
+            "name": u_name, 
+            "inventory": [], 
+            "referrals": 0
         })
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎣 Відкрити Озеро", web_app=WebAppInfo(url=WEBAPP_URL))]
-    ])
-    await bot.send_message(message.chat.id, f"Привіт, {message.chat.first_name}! Твоя вудка готова.", reply_markup=kb)
+        if referrer and referrer != u_id:
+            await users_col.update_one({"user_id": referrer}, {"$inc": {"coins": 50, "referrals": 1}})
 
-# API для WebApp
-async def get_balance(request):
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🎣 Почати риболовлю", web_app=WebAppInfo(url=WEBAPP_URL))
+    ]])
+    await message.answer(f"Привіт, {u_name}!\nТвій ID: `{u_id}`\nГотовий наловити риби?", reply_markup=kb, parse_mode="Markdown")
+
+# --- API Ротінг ---
+async def get_user_data(request):
     user_id = request.query.get("user_id")
     user = await users_col.find_one({"user_id": str(user_id)})
     if user: user.pop("_id", None)
     return web.json_response(user if user else {"error": "not_found"})
 
-async def save_balance(request):
+async def save_user_data(request):
     data = await request.json()
-    await users_col.update_one({"user_id": str(data.get("user_id"))}, {"$set": {"coins": int(data.get("coins"))}}, upsert=True)
+    u_id = str(data.get("user_id"))
+    await users_col.update_one({"user_id": u_id}, {"$set": data}, upsert=True)
     return web.json_response({"ok": True})
 
-async def use_promo(request):
+async def sell_to_system(request):
     data = await request.json()
-    u_id, code = str(data.get("user_id")), data.get("code")
-    if code in PROMO_CODES:
-        user = await users_col.find_one({"user_id": u_id})
-        if code in user.get("used_promos", []):
-            return web.json_response({"ok": False, "message": "Вже використано!"})
-        await users_col.update_one({"user_id": u_id}, {"$inc": {"coins": PROMO_CODES[code]}, "$push": {"used_promos": code}})
-        return web.json_response({"ok": True, "bonus": PROMO_CODES[code]})
-    return web.json_response({"ok": False, "message": "Невірний код!"})
+    u_id, item_id = str(data.get("user_id")), data.get("item_id")
+    price = FISH_DATA.get(item_id, {}).get("price", 5)
+    user = await users_col.find_one({"user_id": u_id})
+    inv = user.get("inventory", [])
+    for idx, item in enumerate(inv):
+        if item["id"] == item_id:
+            inv.pop(idx)
+            await users_col.update_one({"user_id": u_id}, {"$set": {"inventory": inv}, "$inc": {"coins": price}})
+            return web.json_response({"ok": True, "new_balance": user['coins'] + price})
+    return web.json_response({"ok": False})
 
-async def handle_index(request): return web.FileResponse('index.html')
-async def handle_poplavok(request): return web.FileResponse('poplavok.png')
+async def list_on_market(request):
+    data = await request.json()
+    u_id, item_id, price = str(data.get("user_id")), data.get("item_id"), int(data.get("price"))
+    user = await users_col.find_one({"user_id": u_id})
+    inv = user.get("inventory", [])
+    for idx, item in enumerate(inv):
+        if item["id"] == item_id:
+            inv.pop(idx)
+            await users_col.update_one({"user_id": u_id}, {"$set": {"inventory": inv}})
+            await market_col.insert_one({
+                "seller_id": u_id, 
+                "seller_name": user.get("name", "Fisherman"), 
+                "item_id": item_id, 
+                "price": price
+            })
+            return web.json_response({"ok": True})
+    return web.json_response({"ok": False})
+
+async def get_market(request):
+    cursor = market_col.find({})
+    lots = await cursor.to_list(length=100)
+    for l in lots: l.pop("_id", None)
+    return web.json_response(lots)
+
+async def buy_from_market(request):
+    data = await request.json()
+    buyer_id, lot = str(data.get("user_id")), data.get("lot")
+    buyer = await users_col.find_one({"user_id": buyer_id})
+    if buyer["coins"] < lot["price"]: return web.json_response({"ok": False})
+    res = await market_col.delete_one({"seller_id": lot["seller_id"], "item_id": lot["item_id"], "price": lot["price"]})
+    if res.deleted_count > 0:
+        await users_col.update_one({"user_id": buyer_id}, {"$inc": {"coins": -lot["price"]}, "$push": {"inventory": {"id": lot["item_id"]}}})
+        await users_col.update_one({"user_id": lot["seller_id"]}, {"$inc": {"coins": lot["price"]}})
+        return web.json_response({"ok": True})
+    return web.json_response({"ok": False})
 
 app = web.Application()
-app.router.add_get('/', handle_index)
-app.router.add_get('/poplavok.png', handle_poplavok)
-app.router.add_get('/api/get_balance', get_balance)
-app.router.add_post('/api/save_balance', save_balance)
-app.router.add_post('/api/use_promo', use_promo)
+app.router.add_get('/', lambda r: web.FileResponse('index.html'))
+app.router.add_get('/poplavok.png', lambda r: web.FileResponse('poplavok.png'))
+app.router.add_get('/api/get_user', get_user_data)
+app.router.add_post('/api/save_user', save_user_data)
+app.router.add_post('/api/sell_system', sell_to_system)
+app.router.add_post('/api/list_item', list_on_market)
+app.router.add_get('/api/get_market', get_market)
+app.router.add_post('/api/buy_item', buy_from_market)
 
 async def main():
-    runner = web.AppRunner(app)
-    await runner.setup()
+    runner = web.AppRunner(app); await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
     await dp.start_polling(bot)
 
