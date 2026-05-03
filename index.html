@@ -3,59 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FishCash @fishcash_gamebot</title>
+    <title>FishCash Game</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 80px; }
-        .tab-content { display: none; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; box-sizing: border-box; }
+        :root { --primary: #00d2ff; --bg: #0f172a; --card: #1e293b; --shelf: #3e2723; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 90px; -webkit-user-select: none; }
+        .tab-content { display: none; flex-direction: column; align-items: center; padding: 15px; min-height: 100vh; box-sizing: border-box; }
         .active { display: flex; }
         
-        #lake { width: 250px; height: 250px; background: radial-gradient(circle, #00f2fe, #004e92); border-radius: 50%; margin: 20px; border: 4px solid #1e293b; position: relative; overflow: hidden; }
-        #poplavok { width: 45px; height: 45px; position: absolute; display: none; transition: all 0.5s ease-in-out; filter: drop-shadow(0 2px 5px black); }
-        .bite { animation: shake 0.2s infinite; }
-        @keyframes shake { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(0,8px); } }
+        #lake { width: 260px; height: 260px; background: radial-gradient(circle, #00f2fe, #004e92); border-radius: 50%; margin: 20px; border: 4px solid #1e293b; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,210,255,0.2); }
+        #poplavok { width: 50px; height: 50px; position: absolute; display: none; transition: all 0.6s ease; z-index: 10; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
+        .bite { animation: shake 0.3s infinite; }
+        @keyframes shake { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
 
-        .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #3e2723; padding: 15px; border-radius: 10px; width: 100%; box-sizing: border-box; }
-        .slot { background: var(--card); padding: 10px; border-radius: 8px; text-align: center; font-size: 11px; border: 1px solid #334155; }
+        .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: var(--shelf); padding: 10px; border-radius: 10px; width: 100%; box-sizing: border-box; }
+        .slot { background: var(--card); padding: 8px; border-radius: 8px; text-align: center; font-size: 11px; border: 1px solid #334155; }
 
-        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #1e293b; padding-bottom: 20px; border-top: 1px solid #334155; }
-        .nav-item { flex: 1; text-align: center; padding: 15px; color: #94a3b8; font-size: 10px; font-weight: bold; }
-        .active-nav { color: var(--primary); }
+        .market-slot { background: var(--card); padding: 12px; border-radius: 12px; margin-bottom: 8px; width: 100%; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
         
-        .main-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; width: 90%; }
-        .btn-sml { border: none; color: white; padding: 5px; border-radius: 5px; font-size: 9px; width: 100%; margin-top: 5px; }
+        .nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #1e293b; padding-bottom: 25px; border-top: 1px solid #334155; z-index: 100; }
+        .nav-item { flex: 1; text-align: center; padding: 15px; color: #94a3b8; font-size: 10px; }
+        .active-nav { color: var(--primary); font-weight: bold; }
+        
+        .main-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; width: 80%; font-size: 16px; }
+        .btn-sml { border: none; color: white; padding: 5px; border-radius: 5px; font-size: 9px; margin-top: 4px; width: 100%; }
+        .copy-row { display: flex; gap: 5px; margin-top: 10px; width: 100%; }
+        .input-box { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 10px; flex: 1; font-size: 11px; }
     </style>
 </head>
 <body>
 
     <div id="fishing-tab" class="tab-content active">
-        <h2>ОЗЕРО</h2>
+        <h2 data-lang="nav_lake">ОЗЕРО</h2>
         <div id="lake"><img src="poplavok.png" id="poplavok"></div>
-        <div id="status" style="margin-bottom:15px; color:#94a3b8">Готовий?</div>
-        <button id="action-btn" class="main-btn" onclick="startFishing()">ЗАКИНУТИ</button>
+        <div id="status" data-lang="ready" style="margin-bottom:15px; color: #94a3b8;">Готовий?</div>
+        <button id="action-btn" class="main-btn" onclick="startFishing()">ЗАКИНУТИ ВУДКУ</button>
     </div>
 
     <div id="inventory-tab" class="tab-content">
-        <h2>ТВІЙ СКЛАД</h2>
+        <h2 data-lang="nav_inv">ПОЛИЧКИ</h2>
         <div id="inv-grid" class="shelf"></div>
     </div>
 
-    <div id="market-tab" class="tab-content" style="width:100%">
-        <h2>РИНОК</h2>
-        <div id="market-list" style="width:100%; padding:15px; box-sizing:border-box;"></div>
+    <div id="market-tab" class="tab-content" style="width:100%; box-sizing:border-box;">
+        <h2 data-lang="nav_market">РИНОК</h2>
+        <div id="market-list" style="width:100%"></div>
     </div>
 
     <div id="profile-tab" class="tab-content">
-        <h2>ПРОФІЛЬ</h2>
-        <div style="background:var(--card); padding:20px; border-radius:15px; width:100%; border: 1px solid #334155;">
-            <p>👤 Ім'я: <b id="u-name">...</b></p>
+        <h2 data-lang="nav_prof">ПРОФІЛЬ</h2>
+        <div style="background:var(--card); padding:20px; border-radius:15px; width:100%; box-sizing:border-box; border: 1px solid #334155;">
+            <p>👤 <span data-lang="name">Ім'я</span>: <b id="u-name">...</b></p>
             <p>🆔 ID: <b id="u-id">...</b></p>
-            <p>💰 Баланс: <b id="balance" style="color:var(--primary)">0</b></p>
+            <p>💰 <span data-lang="balance">Баланс</span>: <b id="balance" style="color:var(--primary)">0</b></p>
             <hr color="#334155">
-            <p style="font-size:12px">Реферальне посилання:</p>
-            <input id="ref-link" readonly style="width:100%; background:#0f172a; color:white; border:1px solid #334155; padding:8px; border-radius:5px; font-size:10px;">
-            <button class="btn-sml" style="background:var(--primary); padding:10px; font-size:12px;" onclick="copyRef()">КОПІЮВАТИ</button>
+            <label style="font-size:11px; color:#94a3b8">Реф. посилання:</label>
+            <div class="copy-row">
+                <input id="ref-link" readonly class="input-box">
+                <button class="btn-sml" style="background:#10b981; width:70px" onclick="copyRef()">Копіювати</button>
+            </div>
         </div>
     </div>
 
@@ -69,48 +75,54 @@
     <script>
         const tg = window.Telegram.WebApp;
         const UID = String(tg.initDataUnsafe?.user?.id || "000000");
-        let coins = 0, inv = [], isFishing = false;
+        let coins = 0, inv = [], lang = 'uk', isFishing = false;
+
+        const i18n = {
+            uk: { cast: "ЗАКИНУТИ", pull: "ТЯГНИ!", ready: "Готовий?", wait: "Чекай...", bite: "КЛЮЄ!", fish_small: "Мала рибка", fish_karas: "Карась", fish_pike: "ЩУКА" }
+        };
 
         async function load() {
             const r = await fetch(`/api/get_user?user_id=${UID}`);
             const d = await r.json();
             if(!d.error) {
-                coins = d.coins; inv = d.inventory || [];
+                coins = d.coins; inv = d.inventory || []; 
                 document.getElementById('balance').innerText = coins;
                 document.getElementById('u-id').innerText = UID;
-                document.getElementById('u-name').innerText = d.name;
+                document.getElementById('u-name').innerText = d.name || "Fisherman";
                 document.getElementById('ref-link').value = `https://t.me/fishcash_gamebot?start=${UID}`;
             }
         }
 
         function startFishing() {
-            const btn = document.getElementById('action-btn'), p = document.getElementById('poplavok'), st = document.getElementById('status');
+            const btn = document.getElementById('action-btn'), p = document.getElementById('poplavok'), st = document.getElementById('status'), t = i18n[lang];
             if (!isFishing) {
-                isFishing = true; btn.innerText = "ТЯГНИ!"; btn.disabled = true; st.innerText = "Чекаємо на рибу...";
-                p.style.display = "block"; p.style.left = "100px"; p.style.top = "100px";
+                isFishing = true; btn.innerText = t.pull; btn.disabled = true; st.innerText = t.wait;
+                p.style.display = "block"; p.style.left = "105px"; p.style.top = "105px";
+                p.classList.remove("bite");
                 
                 let moves = 0;
                 const mi = setInterval(() => {
-                    p.style.left = (Math.random() * 160 + 20) + "px";
-                    p.style.top = (Math.random() * 160 + 20) + "px";
+                    p.style.left = (Math.random() * 180 + 20) + "px";
+                    p.style.top = (Math.random() * 180 + 20) + "px";
                     if (++moves >= 4) {
-                        clearInterval(mi); p.classList.add("bite"); st.innerText = "КЛЮЄ!"; btn.disabled = false;
+                        clearInterval(mi); p.classList.add("bite"); st.innerText = t.bite; btn.disabled = false;
                         tg.HapticFeedback.notificationOccurred('success');
                     }
                 }, 800);
             } else {
-                isFishing = false; p.style.display = "none"; p.classList.remove("bite");
+                isFishing = false; p.style.display = "none";
                 let fId = Math.random() < 0.1 ? "fish_pike" : (Math.random() < 0.4 ? "fish_karas" : "fish_small");
-                inv.push({id: fId}); st.innerText = "Впіймано: " + fId;
+                inv.push({id: fId}); st.innerText = "Впіймано: " + t[fId];
                 fetch('/api/save_user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: UID, inventory: inv}) });
-                btn.innerText = "ЗАКИНУТИ";
+                btn.innerText = t.cast;
             }
         }
 
         function renderInv() {
             const grid = document.getElementById('inv-grid'); grid.innerHTML = "";
+            const t = i18n[lang];
             inv.forEach((item, idx) => {
-                grid.innerHTML += `<div class="slot"><b>${item.id}</b>
+                grid.innerHTML += `<div class="slot"><b>${t[item.id] || item.id}</b>
                     <button class="btn-sml" style="background:#f59e0b" onclick="listMarket('${item.id}', ${idx})">Ринок</button>
                     <button class="btn-sml" style="background:#10b981" onclick="sellSystem('${item.id}', ${idx})">Продати</button>
                 </div>`;
@@ -124,7 +136,7 @@
         }
 
         async function listMarket(id, idx) {
-            const pr = prompt("Ціна продажу:");
+            const pr = prompt("Ціна:");
             if(!pr || isNaN(pr)) return;
             const r = await fetch('/api/list_item', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({user_id: UID, item_id: id, price: pr}) });
             if((await r.json()).ok) { inv.splice(idx,1); renderInv(); }
@@ -134,11 +146,13 @@
             const list = document.getElementById('market-list');
             const r = await fetch('/api/get_market');
             const lots = await r.json();
+            const t = i18n[lang];
             list.innerHTML = "";
             lots.forEach(lot => {
-                list.innerHTML += `<div style="background:var(--card); padding:10px; margin-bottom:5px; border-radius:10px; display:flex; justify-content:space-between;">
-                    <span><b>${lot.item_id}</b><br><small>${lot.seller_name}</small></span>
-                    <span><b>${lot.price} 💰</b> <button class="btn-sml" style="background:#3b82f6; width:50px" onclick='buyItem(${JSON.stringify(lot)})'>BUY</button></span>
+                const isMe = lot.seller_id == UID;
+                list.innerHTML += `<div class="market-slot">
+                    <div><b>${t[lot.item_id] || lot.item_id}</b><br><small>${lot.seller_name}</small></div>
+                    <div style="text-align:right"><b>${lot.price} 💰</b><br>${isMe ? '' : `<button class="btn-sml" style="background:#3b82f6; width:60px" onclick='buyItem(${JSON.stringify(lot)})'>BUY</button>`}</div>
                 </div>`;
             });
         }
@@ -158,7 +172,7 @@
         function copyRef() {
             const link = document.getElementById('ref-link');
             link.select(); document.execCommand('copy');
-            alert("Скопійовано!");
+            tg.showPopup({ message: "Скопійовано!" });
         }
 
         tg.expand(); load();
